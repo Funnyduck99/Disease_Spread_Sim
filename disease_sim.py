@@ -7,24 +7,34 @@ import random
 
 
 def main():
-    x =5
+    # Initialize pygame
     pygame.init()
+
+    # Create instance of game.
     game = Game()
+
+    # Set window size and start the clock.
     game.screen = pygame.display.set_mode((1200, 720))
     game.clock = pygame.time.Clock()
 
+    # Create menu.
     menu = pygame_menu.Menu('Welcome', 500, 400,theme=pygame_menu.themes.THEME_BLUE)
     game.font = pygame.font.Font(None, 24)
 
+    # Create inputs for the parameters.
     game.population_size = menu.add.text_input('Popuplation Size: ', default=200)
     game.infected_size = menu.add.text_input('Infected Population Size: ', default=1)
     game.spread_rate = menu.add.text_input('Spread Rate: ', default=50)
     game.death_rate = menu.add.text_input('Death Rate: ', default=50)
-    menu.add.button('Play', lambda: start_the_game(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value()))
+
+    # Adds the Play and Quit Button.
+    menu.add.button('Play', lambda: running_simulation(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value()))
     menu.add.button('Quit', pygame_menu.events.EXIT)
+
+    # Loops through menu.
     menu.mainloop(game.screen)
 
-
+    # Set game running to be true.
     game.running = True
     while game.running:
         for event in pygame.event.get():
@@ -46,28 +56,44 @@ def main():
 
 
 
-def start_the_game(game,pop,inf,spr,dea):
+def running_simulation(game,pop,inf,spr,dea):
+
+    # The simulation parameters that where assigned in the starting menu.
     population = int(pop)
     infected = int(inf)
     spread_rate = int(spr)
     death_rate = int(dea)
+
+    # Initialize the list of dead people, will start out as empty.
     dead_list = []
-    grid = create_people(population,infected)
+
+    # Create the initial grid of people.
+    grid = create_population_grid(population,infected)
+
+    # Set the simulation running to True.
     game.running = True
+
+    # The main loop.
+
+    # Checks events for if the red x is clicked to close simulation.
     while game.running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game.running = False
-        game.screen.fill("white")
-        for person in dead_list:
-            pygame.draw.circle(game.screen, person.color, (person.x,person.y), person.radius)
+
+        # Iterate through and update positioning and check infection status.
         for row in grid:
             for sublist in row:
-                # Access and process each sublist
                 for person in sublist:
                     person.move()
                     person.recovery_or_die(death_rate)
-                    pygame.draw.circle(game.screen, person.color, (person.x, person.y), person.radius)
+
+        # Iterate through and check for colisions.
+        for row in grid:
+            for colum in row:
+                for person in colum:
+                    person.collision(grid,spread_rate)
+
         #temp_list = [[[] for _ in range(num_columns)] for _ in range(num_rows)]
         for i,row in enumerate(grid):
             for j,colum in enumerate(row):
@@ -79,14 +105,10 @@ def start_the_game(game,pop,inf,spr,dea):
                         grid[int(i)][int(j)].remove(person)
                         grid[int(person.gridx)][int(person.gridy)].append(person)
 
-                    #temp_list[int(person.gridx)][int(person.gridy)].append(person)
-       # grid = temp_list
+
         
-        
-        for row in grid:
-            for colum in row:
-                for person in colum:
-                    person.collision(grid,spread_rate)
+
+        # When person dies make sure that their position is in bounds to avoid graphical glitches, move them from the grid to the dead list.
         for row in grid:
             for people in row:
                 for person in people:
@@ -102,54 +124,59 @@ def start_the_game(game,pop,inf,spr,dea):
                         dead_list.append(person)
                         people.remove(person)
 
-        fps = str(int(game.clock.get_fps()))
-        fps_text = game.font.render(f"FPS: {fps}", True, pygame.Color("black"))
-        game.screen.blit(fps_text, (10, 10))
 
-
-        pygame.display.flip()
-        game.clock.tick(60)
+        draw_screen(game,grid,dead_list)
 
 
 
+def draw_screen(game,grid,dead_list):
+
+    # Fill the screen white.
+    game.screen.fill("white")
+
+    # Draw the dead people before the living so they are shown behind them.
+    for person in dead_list:
+        pygame.draw.circle(game.screen, person.color, (person.x,person.y), person.radius)
+
+    # Draw the living people.
+    for row in grid:
+        for sublist in row:
+            for person in sublist:
+                pygame.draw.circle(game.screen, person.color, (person.x, person.y), person.radius)
+
+    # Show fps counter in top left.
+    fps = str(int(game.clock.get_fps()))
+    fps_text = game.font.render(f"FPS: {fps}", True, pygame.Color("black"))
+    game.screen.blit(fps_text, (10, 10))
+
+    # 60 fps.
+    pygame.display.flip()
+    game.clock.tick(60)
 
 
 
 
 
 
-
-
-def create_people(population, infected_population):
-    global number
+def create_population_grid(population, infected_population):
+    # Initialize radius of circle.
     radius = 5
+
+    # The number of collums and rows.
     num_columns = 720//10
     num_rows = 1200//10
 
+    # Creates a grid with each zone having an empty list where people will go.
     grid = [[[] for _ in range(num_columns)] for _ in range(num_rows)]
 
-
-    temp_list = []
-
+    # Creates people and adds to the list.
     for index in range(population):
-        
 
-        pick_cord = True
-        while pick_cord == True:
-            pick_cord = False
-            x = random.randint(0+radius, 1200-radius)
-            y = random.randint(0+radius, 720-radius)
+        # Create random x and y values where the people will spawn.
+        x = random.randint(0+radius, 1200-radius)
+        y = random.randint(0+radius, 720-radius)
 
-            # Check for collisions with other people in the array
-            if (len(temp_list)== 0):
-          
-                continue
-          
-            else:
-                for dot in temp_list:
-                    if (math.sqrt(math.pow((dot.x - x),2) + math.pow((dot.y - y),2))<11): #distance formula between the new dot and all other dots on the canvas if it isnt touching any then it can go there
-                        
-                        pick_cord = True
+
         # Set the disease status and color
         if index < infected_population:
             diseased = 'diseased'
