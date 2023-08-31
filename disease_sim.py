@@ -59,27 +59,33 @@ def main():
 def running_simulation(game,pop,inf,spr,dea):
 
     # The simulation parameters that where assigned in the starting menu.
-    population = int(pop)
+    total_population = int(pop)
     infected = int(inf)
     spread_rate = int(spr)
     death_rate = int(dea)
+
 
     # Initialize the list of dead people, will start out as empty.
     dead_list = []
 
     # Create the initial grid of people.
-    grid = create_population_grid(population,infected)
+    grid = create_population_grid(total_population,infected)
 
     # Set the simulation running to True.
     game.running = True
 
     # The main loop.
-
-    # Checks events for if the red x is clicked to close simulation.
     while game.running:
+
+        # Checks events for if the red x is clicked to close simulation.
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game.running = False
+
+        # Sets populations to 0.
+        healthy_population = 0
+        recovered_population = 0
+        infected_population = 0
 
         # Iterate through and update positioning and check infection status.
         for row in grid:
@@ -94,7 +100,7 @@ def running_simulation(game,pop,inf,spr,dea):
                 for person in colum:
                     person.collision(grid,spread_rate)
 
-        #temp_list = [[[] for _ in range(num_columns)] for _ in range(num_rows)]
+        # Update positioning in grid.
         for i,row in enumerate(grid):
             for j,colum in enumerate(row):
                 for person in colum:
@@ -124,12 +130,22 @@ def running_simulation(game,pop,inf,spr,dea):
                         dead_list.append(person)
                         people.remove(person)
 
+        # Finds sizes of each population
+        for i,row in enumerate(grid):
+            for j,colum in enumerate(row):
+                for person in colum:
+                    if person.infection_status == 'diseased':
+                        infected_population+=1
+                    elif person.infection_status == 'healthy':
+                        healthy_population+=1
+                    elif person.infection_status == 'recovered':
+                        recovered_population+=1
 
-        draw_screen(game,grid,dead_list)
+        draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population)
 
 
 
-def draw_screen(game,grid,dead_list):
+def draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population):
 
     # Fill the screen white.
     game.screen.fill("white")
@@ -144,10 +160,33 @@ def draw_screen(game,grid,dead_list):
             for person in sublist:
                 pygame.draw.circle(game.screen, person.color, (person.x, person.y), person.radius)
 
-    # Show fps counter in top left.
+    # Background for the info.
+    pygame.draw.rect(game.screen, (0,200,0), pygame.Rect(8, 10, 235, 85))
+
+    #  Show fps counter in top left.
     fps = str(int(game.clock.get_fps()))
     fps_text = game.font.render(f"FPS: {fps}", True, pygame.Color("black"))
     game.screen.blit(fps_text, (10, 10))
+
+    # Display Total Population.
+    population_text = game.font.render(f"Population Size: {total_population}", True, pygame.Color("black"))
+    game.screen.blit(population_text, (10, 24))
+
+    # Display healthy Population.
+    healthy_text = game.font.render(f"Healthy Population Size: {healthy_population}", True, pygame.Color("black"))
+    game.screen.blit(healthy_text, (10, 38))
+
+    # Display recovered Population.
+    recovered_text = game.font.render(f"Recovered Population Size: {recovered_population}", True, pygame.Color("black"))
+    game.screen.blit(recovered_text, (10, 52))
+
+    # Display infected Population.
+    infected_text = game.font.render(f"Infected Population Size: {infected_population}", True, pygame.Color("black"))
+    game.screen.blit(infected_text, (10, 66))
+
+    # Display dead Population.
+    dead_text = game.font.render(f"Dead Population Size: {len(dead_list)}", True, pygame.Color("black"))
+    game.screen.blit(dead_text, (10, 80))
 
     # 60 fps.
     pygame.display.flip()
