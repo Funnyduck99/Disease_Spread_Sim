@@ -17,11 +17,12 @@ class Person:
         # Randomizes its starting direction.
         self.direction = random.randint(1, 359)  # Add a random direction attribute
         radians = math.radians(self.direction)
-        self.siny = math.sin(radians)
-        self.cosx = math.cos(radians)
+        self.y_movement = math.sin(radians)
+        self.x_movement = math.cos(radians)
 
         # Assigns radius length.
         self.radius = radius
+        self.collision_distance = (self.radius*2)**2
 
         # Assigns recovery time.
         self.recovery_time = 500
@@ -32,8 +33,13 @@ class Person:
         self.height = 720 
 
         # Assigns initial grid position. 
-        self.gridx = self.x//10
-        self.gridy = self.y//10
+        self.grid_cell_size = (self.radius*2)
+        self.gridx = self.x//self.grid_cell_size
+        self.gridy = self.y//self.grid_cell_size
+
+        # Assign grid size.
+        self.grid_width = self.width//self.grid_cell_size
+        self.grid_height = self.height//self.grid_cell_size
 
 
 
@@ -43,81 +49,81 @@ class Person:
         # If the x position hits the wall flip the x movement and set the position to its radius.
         if (self.x <= self.radius):
             self.x = self.radius
-            self.cosx = -self.cosx
+            self.x_movement = -self.x_movement
 
          # If the x position hits the wall flip the x movement and set the position to its the width of canvas - radius.
         if (self.x >= self.width - self.radius):
             self.x = self.width -self.radius
-            self.cosx = -self.cosx
+            self.x_movement = -self.x_movement
 
         # If Y position hits wall, set y to radius.
         if (self.y <= 0+self.radius):
             self.y=self.radius
-            self.siny = -self.siny
+            self.y_movement = -self.y_movement
 
         # If y hits wall set y to canvas height - radius.
         if (self.y >= self.height - self.radius):
-            self.siny = -self.siny
+            self.y_movement = -self.y_movement
             self.y = self.height-self.radius
 
         # Adds movement values to current position.
-        self.y += self.siny
-        self.x += self.cosx
+        self.y += self.y_movement
+        self.x += self.x_movement
         
         # Updates internal grid position.
-        self.gridx = self.x//10
-        self.gridy = self.y//10
+        self.gridx = self.x//self.grid_cell_size
+        self.gridy = self.y//self.grid_cell_size
 
 
     def collision(self, grid, spread):
-        
-        # Loops through adjacent places on the grid to avoid unnecessary checks.
-        for i in range(-1,2,1):
-            for j in range(-1,2,1):
+        for i in range(-1, 2):
+            for j in range(-1, 2):
+                gridx = self.gridx + i
+                gridy = self.gridy + j
 
-                # Assign the grid value you are checking for collisions in.
-                gridx=self.gridx+i
-                gridy=self.gridy+j
-
-                # If the x or y it wants to check on the grid is out of bounds, then continue.
-                if (gridx >= 120 ) or (gridy >= 72):
+                if gridx >= self.grid_width or gridy >= self.grid_height:
                     continue
-                
-                # Creates a pointer to the array of people in a spot on the grid.
+
                 people = grid[int(gridx)][int(gridy)]
 
-                # Iterates through people in its section of grid.
                 for person in people:
-
-                    # If it is checking against itself then continue to next person.
                     if person is self:
                         continue
 
-                    # Runs the x and y values through a distance formula.
                     distance = distance_calc(self.x, person.x, self.y, person.y)
-
-                    # If the circles don't touch then continues to the next person.
-                    if distance > 100:
+                    if distance < 1e-6:  # Adjust the threshold value as needed
                         continue
-                    # Checks if it will spread or not.
-                    if spread >= random.randint(1, 100):
-                            
-                        # Checks if one is diseased
-                        if person.infection_status == 'diseased' and self.infection_status == 'healthy':
-                            self.infection_status = 'diseased'
-                            self.color = 'red'
-                        elif self.infection_status == 'diseased' and person.infection_status == 'healthy':
-                            person.infection_status = 'diseased'
-                            person.color = 'red'
 
-                    # When colliding, 2 circles swap momentum.
-                    self.cosx, self.siny, person.cosx, person.siny = person.cosx, person.siny, self.cosx, self.siny
-                    
-                    # Makes sure that the circles don't get trapped in eachother although this causes bug of them jumping around.
-                    while distance <= 100:
-                        self.x += self.cosx
-                        self.y += self.siny
-                        distance = distance_calc(self.x, person.x, self.y, person.y)
+                    if distance <= self.collision_distance:
+                        dist_sqrt = math.sqrt(distance)
+                        overlap = self.radius + person.radius - dist_sqrt
+
+                        nx = (self.x - person.x) / dist_sqrt
+                        ny = (self.y - person.y) / dist_sqrt
+
+                        self.x += overlap * nx
+                        self.y += overlap * ny
+                        person.x -= overlap * nx
+                        person.y -= overlap * ny
+
+                        rel_velocity_x = self.x_movement - person.x_movement
+                        rel_velocity_y = self.y_movement - person.y_movement
+
+                        impulse = (2.0 * (rel_velocity_x * nx + rel_velocity_y * ny)) / (self.radius + person.radius)
+
+                        self.x_movement -= impulse * person.radius * nx
+                        self.y_movement -= impulse * person.radius * ny
+                        person.x_movement += impulse * self.radius * nx
+                        person.y_movement += impulse * self.radius * ny
+
+                        if spread >= random.randint(1, 100):
+                            if person.infection_status == 'diseased' and self.infection_status == 'healthy':
+                                self.infection_status = 'diseased'
+                                self.color = 'red'
+                            elif self.infection_status == 'diseased' and person.infection_status == 'healthy':
+                                person.infection_status = 'diseased'
+                                person.color = 'red'
+
                             
 
 

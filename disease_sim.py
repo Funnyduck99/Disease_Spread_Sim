@@ -2,7 +2,6 @@ import pygame
 from person import Person
 from game import Game
 import pygame_menu
-import math
 import random
 
 
@@ -26,9 +25,10 @@ def main():
     game.infected_size = menu.add.text_input('Infected Population Size: ', default=1)
     game.spread_rate = menu.add.text_input('Spread Rate: ', default=50)
     game.death_rate = menu.add.text_input('Death Rate: ', default=50)
+    game.radius = menu.add.text_input('Circle Radius: ', default=5)
 
     # Adds the Play and Quit Button.
-    menu.add.button('Play', lambda: running_simulation(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value()))
+    menu.add.button('Play', lambda: running_simulation(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value(),game.radius.get_value()))
     menu.add.button('Quit', pygame_menu.events.EXIT)
 
     # Loops through menu.
@@ -56,7 +56,8 @@ def main():
 
 
 
-def running_simulation(game,pop,inf,spr,dea):
+def running_simulation(game,pop,inf,spr,dea,radius):
+    buffer = 0
 
     # The simulation parameters that where assigned in the starting menu.
     total_population = int(pop)
@@ -69,7 +70,7 @@ def running_simulation(game,pop,inf,spr,dea):
     dead_list = []
 
     # Create the initial grid of people.
-    grid = create_population_grid(total_population,infected)
+    grid = create_population_grid(total_population,infected,radius)
 
     # Set the simulation running to True.
     game.running = True
@@ -87,6 +88,13 @@ def running_simulation(game,pop,inf,spr,dea):
         recovered_population = 0
         infected_population = 0
 
+        # Iterate through and check for colisions.
+        for row in grid:
+            for colum in row:
+                for person in colum:
+                    person.collision(grid,spread_rate)
+
+
         # Iterate through and update positioning and check infection status.
         for row in grid:
             for sublist in row:
@@ -94,21 +102,15 @@ def running_simulation(game,pop,inf,spr,dea):
                     person.move()
                     person.recovery_or_die(death_rate)
 
-        # Iterate through and check for colisions.
-        for row in grid:
-            for colum in row:
-                for person in colum:
-                    person.collision(grid,spread_rate)
-
         # Update positioning in grid.
         for i,row in enumerate(grid):
             for j,colum in enumerate(row):
-                for person in colum:
+               for person in colum:
                     if i != int(person.gridx):
-                        grid[int(i)][int(j)].remove(person)
+                        grid[i][j].remove(person)
                         grid[int(person.gridx)][int(person.gridy)].append(person)
                     elif j != int(person.gridy):
-                        grid[int(i)][int(j)].remove(person)
+                        grid[i][j].remove(person)
                         grid[int(person.gridx)][int(person.gridy)].append(person)
 
 
@@ -197,23 +199,50 @@ def draw_screen(game,grid,dead_list,healthy_population,infected_population,recov
 
 
 
-def create_population_grid(population, infected_population):
+def create_population_grid(population, infected_population,radius):
     # Initialize radius of circle.
-    radius = 5
+    radius = int(radius)
+
+    grid_cell_size = (radius*2)
 
     # The number of collums and rows.
-    num_columns = 720//10
-    num_rows = 1200//10
+    num_columns = 720//grid_cell_size
+    num_rows = 1200//grid_cell_size
 
     # Creates a grid with each zone having an empty list where people will go.
-    grid = [[[] for _ in range(num_columns)] for _ in range(num_rows)]
+    grid = [[[] for _ in range(num_columns+2)] for _ in range(num_rows+2)]
 
     # Creates people and adds to the list.
     for index in range(population):
 
-        # Create random x and y values where the people will spawn.
-        x = random.randint(0+radius, 1200-radius)
-        y = random.randint(0+radius, 720-radius)
+        coords= True
+        while (coords):
+            coords = False
+            # Create random x and y values where the people will spawn.
+            x = random.randint(0+(radius+1), 1200-(radius+1))
+            y = random.randint(0+(radius+1), 720-(radius+1))
+
+
+            for i in range(-1, 2):
+                for j in range(-1, 2):
+                    gridx = int(x//grid_cell_size)+i
+                    gridy = int(y//grid_cell_size)+j
+                    
+                    if 0<gridx >= num_rows or 0<gridy >= num_columns:
+                        continue
+
+                    people = grid[gridx][gridy]
+
+                    for person in people:
+                        distance = distance_calc(x, y, person.x, person.y)
+                        if distance<(radius*2)**2+5:
+                            coords = True
+                            break
+                    if coords:
+                        break
+                if coords:
+                    break
+
 
 
         # Set the disease status and color
@@ -226,11 +255,16 @@ def create_population_grid(population, infected_population):
         
         # Create a new person object and add it to the array
         person = Person(x, y, diseased, color, radius)
-        grid[person.x//10][person.y//10].append(person)
+        #print(f'gridx {person.gridx} gridy {person.gridy}')
+        grid[person.gridx][person.gridy].append(person)
 
     return grid
 
+def distance_calc(x1,x2,y1,y2): #Tested
 
+    # The math to tell if a circle collides. Its just the distance formula.
+    distance = ((x1 - x2)**2 + (y1 - y2)**2)
+    return distance
 
 if __name__ == "__main__":
 
