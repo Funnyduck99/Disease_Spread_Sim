@@ -3,6 +3,8 @@ from person import Person
 from game import Game
 import pygame_menu
 import random
+import matplotlib.pyplot as plt
+from IPython import display
 
 
 def main():
@@ -17,7 +19,7 @@ def main():
     game.clock = pygame.time.Clock()
 
     # Create menu.
-    menu = pygame_menu.Menu('Welcome', 500, 400,theme=pygame_menu.themes.THEME_BLUE)
+    menu = pygame_menu.Menu('Welcome', 600, 500,theme=pygame_menu.themes.THEME_BLUE)
     game.font = pygame.font.Font(None, 24)
 
     # Create inputs for the parameters.
@@ -26,9 +28,9 @@ def main():
     game.spread_rate = menu.add.text_input('Spread Rate: ', default=50)
     game.death_rate = menu.add.text_input('Death Rate: ', default=50)
     game.radius = menu.add.text_input('Circle Radius: ', default=5)
-
+    game.recovery_time = menu.add.text_input('Recovery Time in Seconds: ', default=10)
     # Adds the Play and Quit Button.
-    menu.add.button('Play', lambda: running_simulation(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value(),game.radius.get_value()))
+    menu.add.button('Play', lambda: running_simulation(game,game.population_size.get_value(),game.infected_size.get_value(),game.spread_rate.get_value(),game.death_rate.get_value(),game.radius.get_value(),game.recovery_time.get_value()))
     menu.add.button('Quit', pygame_menu.events.EXIT)
 
     # Loops through menu.
@@ -56,21 +58,29 @@ def main():
 
 
 
-def running_simulation(game,pop,inf,spr,dea,radius):
-    buffer = 0
+def running_simulation(game,pop,inf,spr,dea,radius,recovery_time):
+
+    # Initialize the timer variable
+    elapsed_time = 0
 
     # The simulation parameters that where assigned in the starting menu.
     total_population = int(pop)
     infected = int(inf)
     spread_rate = int(spr)
     death_rate = int(dea)
+    avg_recovery_time = int(recovery_time)*60
 
+    # Initialize list that will hold population ammounts for each frame.
+    plot_dead = []
+    plot_healthy = []
+    plot_recovered = []
+    plot_infected = []
 
     # Initialize the list of dead people, will start out as empty.
     dead_list = []
 
     # Create the initial grid of people.
-    grid = create_population_grid(total_population,infected,radius)
+    grid = create_population_grid(total_population,infected,radius,avg_recovery_time)
 
     # Set the simulation running to True.
     game.running = True
@@ -143,11 +153,28 @@ def running_simulation(game,pop,inf,spr,dea,radius):
                     elif person.infection_status == 'recovered':
                         recovered_population+=1
 
-        draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population)
+        draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population,elapsed_time)
+
+        # Append population ammounts to plot lists.
+        plot_healthy.append(healthy_population)
+        plot_infected.append(infected_population)
+        plot_recovered.append(recovered_population)
+        plot_dead.append(len(dead_list))
+
+        # Update the elapsed_time variable safely depending on how long the frame took.
+        elapsed_time += 1 / 60
+
+        if (infected_population == 0):
+            game.running = False
+
+    # Draw chart when done.
+    plot(plot_healthy,plot_infected,plot_dead,plot_recovered)
 
 
 
-def draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population):
+
+
+def draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population,elapsed_time):
 
     # Fill the screen white.
     game.screen.fill("white")
@@ -163,7 +190,12 @@ def draw_screen(game,grid,dead_list,healthy_population,infected_population,recov
                 pygame.draw.circle(game.screen, person.color, (person.x, person.y), person.radius)
 
     # Background for the info.
-    pygame.draw.rect(game.screen, (0,200,0), pygame.Rect(8, 10, 235, 85))
+    #pygame.draw.rect(game.screen, (0,200,0), pygame.Rect(8, 10, 235, 85))
+    population_background = pygame.Surface((220+len(str(total_population))*10, 85))
+    population_background.fill((0, 255, 0))  # Fill with green color
+    population_background.set_alpha(200)  # Set transparency (adjust as needed)
+    game.screen.blit(population_background, (8, 10))
+
 
     #  Show fps counter in top left.
     fps = str(int(game.clock.get_fps()))
@@ -190,19 +222,45 @@ def draw_screen(game,grid,dead_list,healthy_population,infected_population,recov
     dead_text = game.font.render(f"Dead Population Size: {len(dead_list)}", True, pygame.Color("black"))
     game.screen.blit(dead_text, (10, 80))
 
+    # Display elapsed time in the top right corner with 2 decimal places and a green box background
+    timer_text = game.font.render(f"Time: {elapsed_time:.2f} seconds", True, pygame.Color("black"))
+    timer_background = pygame.Surface((timer_text.get_width(), timer_text.get_height()))
+    timer_background.fill((0, 255, 0))  # Fill with green color
+    timer_background.set_alpha(200)  # Set transparency (adjust as needed)
+    game.screen.blit(timer_background, (game.screen.get_width() - timer_text.get_width() - 15, 10))
+    game.screen.blit(timer_text, (game.screen.get_width() - timer_text.get_width() - 10, 10))
+
+
     # 60 fps.
     pygame.display.flip()
     game.clock.tick(60)
 
+def plot(healthy, infected, dead, recovered):
+    thickness = 5
+    display.clear_output(wait=True)
+    plt.clf()
+    plt.title('Populations')
+    plt.xlabel('Time')
+    plt.ylabel('Population amount')
+    plt.plot(healthy, label='Healthy', color='green', linewidth=thickness)
+    plt.plot(infected, label='Infected', color='red', linewidth=thickness)
+    plt.plot(dead, label='Dead', color='black', linewidth=thickness)
+    plt.plot(recovered, label='Recovered', color='blue', linewidth=thickness)
+    plt.ylim(ymin=0)
+    plt.legend()  # Add legend to the plot
+    plt.show(block=False)
+    plt.pause(0.1)
 
 
 
 
 
-def create_population_grid(population, infected_population,radius):
+
+def create_population_grid(population, infected_population,radius,recovery_time):
     # Initialize radius of circle.
     radius = int(radius)
 
+    # Initialized cell size.
     grid_cell_size = (radius*2)
 
     # The number of collums and rows.
@@ -254,7 +312,7 @@ def create_population_grid(population, infected_population,radius):
             color = 'blue'
         
         # Create a new person object and add it to the array
-        person = Person(x, y, diseased, color, radius)
+        person = Person(x, y, diseased, color, radius, recovery_time)
         #print(f'gridx {person.gridx} gridy {person.gridy}')
         grid[person.gridx][person.gridy].append(person)
 

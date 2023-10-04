@@ -3,7 +3,7 @@ import math
 
 
 class Person:
-    def __init__(self, x_position, y_position,status,color,radius):
+    def __init__(self, x_position, y_position,status,color,radius,recovery_time):
         # Assign color.
         self.color = color
 
@@ -25,7 +25,7 @@ class Person:
         self.collision_distance = (self.radius*2)**2
 
         # Assigns recovery time.
-        self.recovery_time = 500
+        self.recovery_time = recovery_time
         self.recovered = 0
 
         #Width and height of canvas.
