@@ -329,6 +329,10 @@ if __name__ == "__main__":
    main()
 
 
+<<<<<<< HEAD
 # change
 
 
+=======
+# Test comment
+>>>>>>> test
