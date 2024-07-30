@@ -70,7 +70,7 @@ def running_simulation(game,pop,inf,spr,dea,radius,recovery_time):
     death_rate = int(dea)
     avg_recovery_time = int(recovery_time)*60
 
-    # Initialize list that will hold population ammounts for each frame.
+    # Initialize list that will hold population ammounts for each fram, used for plotting.
     plot_dead = []
     plot_healthy = []
     plot_recovered = []
@@ -327,12 +327,3 @@ def distance_calc(x1,x2,y1,y2): #Tested
 if __name__ == "__main__":
 
    main()
-
-
-<<<<<<< HEAD
-# change
-
-
-=======
-# Test comment
->>>>>>> test
