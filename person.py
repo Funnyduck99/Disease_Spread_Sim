@@ -52,7 +52,7 @@ class Person:
             self.x_movement = -self.x_movement
 
          # If the x position hits the wall flip the x movement and set the position to its the width of canvas - radius.
-        if (self.x >= self.width - self.radius):
+        elif (self.x >= self.width - self.radius):
             self.x = self.width -self.radius
             self.x_movement = -self.x_movement
 
@@ -62,7 +62,7 @@ class Person:
             self.y_movement = -self.y_movement
 
         # If y hits wall set y to canvas height - radius.
-        if (self.y >= self.height - self.radius):
+        elif (self.y >= self.height - self.radius):
             self.y_movement = -self.y_movement
             self.y = self.height-self.radius
 
@@ -76,6 +76,7 @@ class Person:
 
 
     def collision(self, grid, spread):
+        # loops only through adjacent squares in the grid
         for i in range(-1, 2):
             for j in range(-1, 2):
                 gridx = self.gridx + i
