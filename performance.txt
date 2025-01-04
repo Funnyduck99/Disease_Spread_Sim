@@ -1,0 +1,16 @@
+Current OOP design performance numbers:
+Pop size 200, radius 1, FPS 31-33
+Pop size 400, radius 1, FPS 30-31
+Pop size 800, radius 1, FPS 29-30
+
+Pop size 1000, radius 5, FPS 58-59
+Pop size 1000, radius 4, FPS 58-59
+Pop size 1000, radius 3, FPS 58-59
+Pop size 1000, radius 2, FPS 58-59
+Pop size 1000, radius 1, FPS 27-28
+
+Pop size 2000, radius 5, FPS 58-59
+Pop size 3000, radius 5, FPS 58-59
+Pop size 4000, radius 5, FPS 40-46
+Pop size 5000, radius 5, FPS 35
+Pop size 6000, radius 5, FPS 25

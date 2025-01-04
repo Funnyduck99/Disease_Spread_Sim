@@ -102,45 +102,9 @@ def running_simulation(game,pop,inf,spr,dea,radius,recovery_time):
         for row in grid:
             for colum in row:
                 for person in colum:
-                    person.collision(grid,spread_rate)
-
-
-        # Iterate through and update positioning and check infection status.
-        for row in grid:
-            for sublist in row:
-                for person in sublist:
                     person.move()
+                    person.collision(grid,spread_rate)
                     person.recovery_or_die(death_rate)
-
-        # Update positioning in grid.
-        for i,row in enumerate(grid):
-            for j,colum in enumerate(row):
-               for person in colum:
-                    if i != int(person.gridx):
-                        grid[i][j].remove(person)
-                        grid[int(person.gridx)][int(person.gridy)].append(person)
-                    elif j != int(person.gridy):
-                        grid[i][j].remove(person)
-                        grid[int(person.gridx)][int(person.gridy)].append(person)
-
-
-        
-
-        # When person dies make sure that their position is in bounds to avoid graphical glitches, move them from the grid to the dead list.
-        for row in grid:
-            for people in row:
-                for person in people:
-                    if person.infection_status == 'dead':
-                        if (person.x <= person.radius):
-                            person.x = person.radius
-                        if (person.x >= person.width - person.radius):
-                            person.x = person.width -person.radius
-                        if (person.y <= 0+person.radius):
-                            person.y=person.radius
-                        if (person.y >= person.height - person.radius):
-                            person.y = person.height-person.radius
-                        dead_list.append(person)
-                        people.remove(person)
 
         # Finds sizes of each population
         for i,row in enumerate(grid):
@@ -152,6 +116,17 @@ def running_simulation(game,pop,inf,spr,dea,radius,recovery_time):
                         healthy_population+=1
                     elif person.infection_status == 'recovered':
                         recovered_population+=1
+
+        # Update positioning in grid.
+        for i,row in enumerate(grid):
+            for j,colum in enumerate(row):
+               for person in colum:
+                    if person.infection_status == 'dead':
+                        dead_list.append(person)
+                        colum.remove(person)
+                    elif i != int(person.gridx) or j != int(person.gridy):
+                        colum.remove(person)
+                        grid[int(person.gridx)][int(person.gridy)].append(person)
 
         draw_screen(game,grid,dead_list,healthy_population,infected_population,recovered_population,total_population,elapsed_time)
 
@@ -229,7 +204,6 @@ def draw_screen(game,grid,dead_list,healthy_population,infected_population,recov
     timer_background.set_alpha(200)  # Set transparency (adjust as needed)
     game.screen.blit(timer_background, (game.screen.get_width() - timer_text.get_width() - 15, 10))
     game.screen.blit(timer_text, (game.screen.get_width() - timer_text.get_width() - 10, 10))
-
 
     # 60 fps.
     pygame.display.flip()
